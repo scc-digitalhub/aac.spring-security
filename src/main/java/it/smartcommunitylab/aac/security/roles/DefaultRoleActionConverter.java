@@ -5,9 +5,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.util.Assert;
 
-public class DefaultRoleActionConverter implements RoleActionConverter {
+public class DefaultRoleActionConverter<T> implements RoleActionConverter<T> {
 
     public final static String ROLE = "ROLE_USER";
 
@@ -16,13 +17,18 @@ public class DefaultRoleActionConverter implements RoleActionConverter {
     private List<String> actions = Collections.emptyList();
 
     @Override
-    public List<String> toRole(String action) {
+    public List<String> extractRoles(Authentication authentication, T entity) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<String> allowedRoles(String action) {
         // any action to role
         return Collections.singletonList(getRole());
     }
 
     @Override
-    public List<String> toActions(String role) {
+    public List<String> grantsActions(String role) {
         return actions;
     }
 
@@ -42,4 +48,5 @@ public class DefaultRoleActionConverter implements RoleActionConverter {
     public void setAction(Collection<String> actions) {
         this.actions = new ArrayList<>(actions);
     }
+
 }

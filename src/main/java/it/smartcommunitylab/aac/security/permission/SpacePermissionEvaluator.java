@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +29,7 @@ public class SpacePermissionEvaluator implements PermissionEvaluator {
 
     public final static String TARGET_TYPE = "SPACE";
 
-    private RoleActionConverter roleActionConverter = new DefaultRoleActionConverter();
+    private RoleActionConverter<Namespace> roleActionConverter = new DefaultRoleActionConverter<>();
 
     private final List<String> spaces;
 
@@ -44,19 +45,13 @@ public class SpacePermissionEvaluator implements PermissionEvaluator {
 
     @Override
     public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
-        // no space object to check
-        return false;
-    }
-
-    @Override
-    public boolean hasPermission(Authentication authentication, Serializable targetId, String targetType,
-            Object permission) {
-
-        if (!TARGET_TYPE.equals(targetType)) {
+        if (!(targetDomainObject instanceof Namespace)) {
+            // no space object to check
             return false;
         }
 
-        String spaceId = targetId.toString();
+        Namespace space = (Namespace) targetDomainObject;
+        String spaceId = space.getSpace();
         String userId = authentication.getName();
         String action = permission.toString();
 
@@ -70,25 +65,50 @@ public class SpacePermissionEvaluator implements PermissionEvaluator {
         _log.trace("user " + userId + " authorities " + authorities.toString());
 
         // keep ONLY space roles
+
         List<String> roles = getSpaceRoles(spaceId, authorities);
         _log.trace("user " + userId + " space " + spaceId + " roles " + roles.toString());
 
+        // append converter roles if defined
+        roles.addAll(roleActionConverter.extractRoles(authentication, space));
+
         // get role
-        List<String> requiredRoles = roleActionConverter.toRole(action);
-        _log.trace("user " + userId + " action " + action + " require role in " + requiredRoles.toString());
+        List<String> allowedRoles = roleActionConverter.allowedRoles(action);
+        _log.trace("user " + userId + " action " + action + " require role in " + allowedRoles.toString());
 
-        hasPermission = CollectionUtils.containsAny(roles, requiredRoles);
+        hasPermission = CollectionUtils.containsAny(roles, allowedRoles);
 
+//        // derive actions from roles
+//        hasPermission = false;
+//
+//        for (String role : roles) {
+//            if (roleActionConverter.toActions(role).contains(action)) {
+//                hasPermission = true;
+//                break;
+//            }
+//        }        
         _log.debug("user " + userId + " hasPermission for space " + spaceId + ":" + action + " " + hasPermission);
 
         return (isPermitted && hasPermission);
+
+    }
+
+    @Override
+    public boolean hasPermission(Authentication authentication, Serializable targetId, String targetType,
+            Object permission) {
+
+        if (!TARGET_TYPE.equals(targetType)) {
+            return false;
+        }
+
+        return hasPermission(authentication, new Namespace(targetId.toString()), permission);
     }
 
     /*
      * Helpers
      */
 
-    public void setRoleActionConverter(RoleActionConverter roleActionConverter) {
+    public void setRoleActionConverter(RoleActionConverter<Namespace> roleActionConverter) {
         Assert.notNull(roleActionConverter, "role action converter can not be null");
         this.roleActionConverter = roleActionConverter;
     }

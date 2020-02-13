@@ -231,7 +231,7 @@ When configured, the converter will parse the JWT to look for scopes inside the 
 
 For each given scope, it will instantiate the ``ScopeGrantedAuthority`` class, which will expose the following methods:
 
-``
+```java
  public String getScope();
  public String getAuthority();
 ```
@@ -261,6 +261,7 @@ Converter<Jwt, AbstractAuthenticationToken> jwtTokenConverter() {
 ```     
 
 Each valid principal will possess the specific ``GrantedAuthority``:
+
 
 ```
 i.s.a.s.p.SpacePermissionEvaluator       : user 17 authorities [ROLE_USER, SCOPE_openid, SCOPE_profile, SCOPE_profile.basicprofile.me, SCOPE_email, SCOPE_user.roles.me]

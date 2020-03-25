@@ -7,9 +7,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.util.StringUtils;
 
-import it.smartcommunitylab.aac.security.authority.NamespacedGrantedAuthority;
+import it.smartcommunitylab.aac.security.authority.SpaceGrantedAuthority;
 
-public class JwtComponentAwareAuthoritiesRoleConverter extends JwtNamespaceAwareAuthoritiesRoleConverter {
+public class JwtComponentAwareAuthoritiesRoleConverter extends JwtSpaceAwareAuthoritiesRoleConverter {
 
     private final String component;
 
@@ -32,8 +32,8 @@ public class JwtComponentAwareAuthoritiesRoleConverter extends JwtNamespaceAware
             Collection<GrantedAuthority> componentAuthorities = new ArrayList<>();
             for (GrantedAuthority authority : authorities) {
                 if (authority.getAuthority().startsWith(component)) {
-                    if (authority instanceof NamespacedGrantedAuthority) {
-                        NamespacedGrantedAuthority a = (NamespacedGrantedAuthority) authority;
+                    if (authority instanceof SpaceGrantedAuthority) {
+                        SpaceGrantedAuthority a = (SpaceGrantedAuthority) authority;
 
                         String s = a.getSpace().substring(component.length());
                         if (s.startsWith("/")) {
@@ -44,7 +44,7 @@ public class JwtComponentAwareAuthoritiesRoleConverter extends JwtNamespaceAware
                         // e.g components/<component>:ROLE_PROVIDER against
                         // components/<component>/<space>:ROLE_USER
                         if (StringUtils.hasText(s)) {
-                            componentAuthorities.add(new NamespacedGrantedAuthority(s, a.getRole()));
+                            componentAuthorities.add(new SpaceGrantedAuthority(s, a.getRole()));
                         } else {
                             // consider as top authority
                             componentAuthorities.add(new SimpleGrantedAuthority(a.getRole()));

@@ -14,10 +14,10 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-import it.smartcommunitylab.aac.security.authority.NamespacedGrantedAuthority;
+import it.smartcommunitylab.aac.security.authority.SpaceGrantedAuthority;
 
-public class JwtNamespaceAwareAuthoritiesRoleConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
-    private final static Logger _log = LoggerFactory.getLogger(JwtNamespaceAwareAuthoritiesRoleConverter.class);
+public class JwtSpaceAwareAuthoritiesRoleConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
+    private final static Logger _log = LoggerFactory.getLogger(JwtSpaceAwareAuthoritiesRoleConverter.class);
 
     private final static String[] WELL_KNOWN_AUTHORITIES_CLAIM_NAMES = { "authorities", "roles" };
 
@@ -32,7 +32,7 @@ public class JwtNamespaceAwareAuthoritiesRoleConverter implements Converter<Jwt,
             // as "<context>/<space>:<role>
             if (authority.contains(":")) {
                 AbstractMap.SimpleImmutableEntry<String, String> s = spaceAwareExtractor(authority);
-                authorities.add(new NamespacedGrantedAuthority(s.getKey(), s.getValue()));
+                authorities.add(new SpaceGrantedAuthority(s.getKey(), s.getValue()));
             } else {
                 authorities.add(new SimpleGrantedAuthority(authority));
             }

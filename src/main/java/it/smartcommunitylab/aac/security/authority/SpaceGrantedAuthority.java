@@ -3,14 +3,14 @@ package it.smartcommunitylab.aac.security.authority;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.util.Assert;
 
-public class NamespacedGrantedAuthority implements GrantedAuthority {
+public class SpaceGrantedAuthority implements GrantedAuthority {
 
     private static final long serialVersionUID = -2199514268126633626L;
 
     private final String space;
     private final String role;
 
-    public NamespacedGrantedAuthority(String space, String role) {
+    public SpaceGrantedAuthority(String space, String role) {
         Assert.hasText(space, "A space textual representation is required");
         Assert.hasText(role, "A granted authority textual representation is required");
         this.space = space;
@@ -47,7 +47,7 @@ public class NamespacedGrantedAuthority implements GrantedAuthority {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        NamespacedGrantedAuthority other = (NamespacedGrantedAuthority) obj;
+        SpaceGrantedAuthority other = (SpaceGrantedAuthority) obj;
         if (role == null) {
             if (other.role != null)
                 return false;

@@ -18,18 +18,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
-import it.smartcommunitylab.aac.security.authority.NamespacedGrantedAuthority;
+import it.smartcommunitylab.aac.security.authority.SpaceGrantedAuthority;
 import it.smartcommunitylab.aac.security.authority.ScopeGrantedAuthority;
 import it.smartcommunitylab.aac.security.roles.DefaultRoleActionConverter;
 import it.smartcommunitylab.aac.security.roles.RoleActionConverter;
 
 @Component
-public class SpacePermissionEvaluator implements PermissionEvaluator {
+public class SpacePermissionEvaluator implements NamedPermissionEvaluator {
     private final static Logger _log = LoggerFactory.getLogger(SpacePermissionEvaluator.class);
 
-    public final static String TARGET_TYPE = "SPACE";
+    public final static String TARGET = Space.class.getSimpleName().toUpperCase();
 
-    private RoleActionConverter<Namespace> roleActionConverter = new DefaultRoleActionConverter<>();
+    private RoleActionConverter<Space> roleActionConverter = new DefaultRoleActionConverter<>();
 
     private final List<String> spaces;
 
@@ -45,12 +45,12 @@ public class SpacePermissionEvaluator implements PermissionEvaluator {
 
     @Override
     public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
-        if (!(targetDomainObject instanceof Namespace)) {
+        if (!(targetDomainObject instanceof Space)) {
             // no space object to check
             return false;
         }
 
-        Namespace space = (Namespace) targetDomainObject;
+        Space space = (Space) targetDomainObject;
         String spaceId = space.getSpace();
         String userId = authentication.getName();
         String action = permission.toString();
@@ -64,15 +64,11 @@ public class SpacePermissionEvaluator implements PermissionEvaluator {
         List<GrantedAuthority> authorities = new ArrayList<>(authentication.getAuthorities());
         _log.trace("user " + userId + " authorities " + authorities.toString());
 
-        // keep ONLY space roles
-
-        List<String> roles = getSpaceRoles(spaceId, authorities);
+        // get roles from space and from converter
+        List<String> roles = getRoles(authentication, spaceId);
         _log.trace("user " + userId + " space " + spaceId + " roles " + roles.toString());
 
-        // append converter roles if defined
-        roles.addAll(roleActionConverter.extractRoles(authentication, space));
-
-        // get role
+        // get allowed roles for action
         List<String> allowedRoles = roleActionConverter.allowedRoles(action);
         _log.trace("user " + userId + " action " + action + " require role in " + allowedRoles.toString());
 
@@ -97,18 +93,23 @@ public class SpacePermissionEvaluator implements PermissionEvaluator {
     public boolean hasPermission(Authentication authentication, Serializable targetId, String targetType,
             Object permission) {
 
-        if (!TARGET_TYPE.equals(targetType)) {
+        if (!TARGET.equals(targetType.toUpperCase())) {
             return false;
         }
 
-        return hasPermission(authentication, new Namespace(targetId.toString()), permission);
+        return hasPermission(authentication, new Space(targetId.toString()), permission);
+    }
+
+    @Override
+    public String getName() {
+        return TARGET;
     }
 
     /*
      * Helpers
      */
 
-    public void setRoleActionConverter(RoleActionConverter<Namespace> roleActionConverter) {
+    public void setRoleActionConverter(RoleActionConverter<Space> roleActionConverter) {
         Assert.notNull(roleActionConverter, "role action converter can not be null");
         this.roleActionConverter = roleActionConverter;
     }
@@ -123,12 +124,28 @@ public class SpacePermissionEvaluator implements PermissionEvaluator {
 
     }
 
-    private List<String> getSpaceRoles(String spaceId, List<GrantedAuthority> authorities) {
+    private List<String> getRoles(Authentication authentication, String spaceId) {
+
+        // keep ONLY space roles
+        List<String> roles = getSpaceRoles(new ArrayList<>(authentication.getAuthorities()), spaceId);
+
+        // append converter roles if defined
+        roles.addAll(getConverterRoles(authentication, spaceId));
+
+        return roles;
+
+    }
+
+    protected List<String> getConverterRoles(Authentication authentication, String spaceId) {
+        return roleActionConverter.extractRoles(authentication, new Space(spaceId));
+    }
+
+    protected List<String> getSpaceRoles(Collection<GrantedAuthority> authorities, String spaceId) {
         Set<String> roles = new HashSet<>();
 
         for (GrantedAuthority ga : authorities) {
-            if (ga instanceof NamespacedGrantedAuthority) {
-                NamespacedGrantedAuthority a = (NamespacedGrantedAuthority) ga;
+            if (ga instanceof SpaceGrantedAuthority) {
+                SpaceGrantedAuthority a = (SpaceGrantedAuthority) ga;
                 // require space match
                 if (a.getSpace().equals(spaceId)) {
                     roles.add(a.getRole());

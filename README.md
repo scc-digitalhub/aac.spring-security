@@ -16,15 +16,9 @@ For example with maven
 
 
 <dependency>
-   <groupId>org.springframework.security</groupId>
-   <artifactId>spring-security-oauth2-jose</artifactId>
-</dependency>
-
-
-<dependency>
    <groupId>it.smartcommunitylab</groupId>
    <artifactId>aac.spring-security</artifactId>
-   <version>1.0.0</version>
+   <version>1.2.0</version>
 </dependency>
 
 ``` 
@@ -68,26 +62,24 @@ To define new validators or extend the default spring behaviour, it is necessary
 For example:
 
 ```java
- @Bean
- JwtDecoder jwtDecoder() {
-     NimbusJwtDecoder jwtDecoder = (NimbusJwtDecoder) JwtDecoders.fromIssuerLocation(issuerUri);
+    @Bean
+    JwtDecoder jwtDecoder() {
+        JwtDecoder jwtDecoder = JwtDecoders.fromIssuerLocation(issuerUri);
+        
+        // we need to validate audience in addition to issuer
+        OAuth2TokenValidator<Jwt> audienceValidator = new JwtAudienceValidator(clientId);
+        
+        // we want to validate revocation
+        OAuth2TokenValidator<Jwt> revocationValidator = new JwtRevocationValidator(issuerUri, clientId, clientSecret);
 
-  OAuth2TokenValidator<Jwt> audienceValidator = new JwtAudienceValidator(clientId);
-  OAuth2TokenValidator<Jwt> revocationValidator = new JwtRevocationValidator(issuerUri, clientId, clientSecret);
-
-  OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
-  OAuth2TokenValidator<Jwt> withAudience = new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator,
-          revocationValidator);
-
-  jwtDecoder.setJwtValidator(withAudience);
-
-  return jwtDecoder;
- }
-
+        return new JwtValidatingDecoder(jwtDecoder, audienceValidator, revocationValidator);
+    }
 
 ```
 
-Do note that is is mandatory to include the default JWT validator via ``createDefaultWithIssuer``, otherwise all the basic JWT checks will be skipped. Furthermore, calling ``JwtDecoders#fromIssuerLocation`` is what invokes the Provider Configuration or Authorization Server Metadata endpoint in order to derive the JWK Set Uri. It is mandatory to derive the basic ``jwtDecoder`` from one the factory to obtain a valid configuration.
+Do note that it is mandatory to include the default JWT decoder obtained via ``JwtDecoders``, otherwise all the basic JWT checks will be skipped. Furthermore, calling ``JwtDecoders#fromIssuerLocation`` is what invokes the Provider Configuration or Authorization Server Metadata endpoint in order to derive the JWK Set Uri. It is mandatory to derive the basic ``jwtDecoder`` from one the factory to obtain a valid configuration.
+
+By enriching the default decoder via custom validators, we will obtain a fully customizable decoding chain. Simply instantiate a new ``JwtValidatingDecoder`` by providing the base decoder and a series of validators.
 
 
 #### Audience Validator
@@ -327,21 +319,21 @@ Converter<Jwt, AbstractAuthenticationToken> jwtTokenConverter() {
 When the Idp supports multiple tenants, we can write applications which properly support them by defining a ``namespace`` as a unique space dedicated to a single ``tenant``.
 
 In AAC, such spaces are defined in a flexible and powerful way, either by ``component`` or by ``organization``.
-This library supports any configuration, by providing developers with a specific ``NamespacedGrantedAuthority`` and the relative ``JwtNamespaceAwareAutoritiesRoleConverter``.
+This library supports any configuration, by providing developers with a specific ``SpaceGrantedAuthority`` and the relative ``JwtSpaceAwareAutoritiesRoleConverter``.
 
-The idea is to define each privilege gained for a specific tenant as a *namespaced* one, which will be evaluated by the application only when the request matches the specific ``namespace``.
+The idea is to define each privilege gained for a specific tenant as a *namespaced* one, which will be evaluated by the application only when the request matches the specific ``space``.
 
 For example, a role defined in AAC as ``components/myapplication/tenant123:ROLE_MANAGER`` can be interpreted as a role:
 * restricted to the component ``[myapplication]``
-* available only for the namespace ``[tenant123]``
+* available only for the space ``[tenant123]``
 
-The ``JwtNamespaceAwareAutoritiesRoleConverter`` will translate this claim from JWT to a ``NamespacedGrantedAuthority`` with:
-* ``space=tenant123``
+The ``JwtSpaceAwareAutoritiesRoleConverter`` will translate this claim from JWT to a ``SpaceGrantedAuthority`` with:
+* ``space=components/myapplication/tenant123``
 * ``role=ROLE_MANAGER``
 
 The authority will output 
 ```
-getAuthority() = "tenant123:ROLE_MANAGER"
+getAuthority() = "components/myapplication/tenant123:ROLE_MANAGER"
 ```
 
 At any given time, consumers will be able to cast back the granted authority and directly inspect the space and/or role.

@@ -10,7 +10,6 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.util.Assert;
 
 /*
@@ -45,6 +44,6 @@ public class JwtAuthenticationConverter implements Converter<Jwt, AbstractAuthen
             authorities.addAll(c.convert(jwt));
         }
 
-        return new JwtAuthenticationToken(jwt, authorities);
+        return new JwtUserAuthenticationToken(jwt, authorities);
     }
 }
